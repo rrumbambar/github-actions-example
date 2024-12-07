@@ -2,7 +2,7 @@ import configparser
 from flask import Flask
 
 config = configparser.RawConfigParser()
-config.read('config.properties')
+config.read('/app/config.properties')
 
 app = Flask(__name__)
 

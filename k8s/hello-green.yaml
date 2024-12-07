@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-deployment-green
+  labels:
+    app: hello-app
+    environment: green
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-app
+      environment: green
+  template:
+    metadata:
+      labels:
+        app: hello-app
+        environment: green
+    spec:
+      containers:
+      - name: hello-container
+        image: dbatruh/github-actions-example:25cb89f
+        ports:
+        - containerPort: 8050
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config.properties
+          subPath: config.properties        
+      volumes:
+      - name: config-volume
+        configMap:
+          name: hello-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+spec:
+  selector:
+    app: hello-app
+    environment: blue
+  ports:
+  - protocol: TCP
+    port: 8050
+    targetPort: 8050
+    nodePort: 30111
+  type: NodePort
