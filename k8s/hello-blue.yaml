@@ -44,4 +44,4 @@ spec:
     port: 8050
     targetPort: 8050
     nodePort: 30111
-  type: NodePort
+  type: LoadBalancer

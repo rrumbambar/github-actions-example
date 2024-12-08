@@ -105,48 +105,53 @@ jobs:
         cluster_name: '${{ secrets.GKE_CLUSTER }}'
         location: '${{ secrets.GKE_REGION }}'
 
-    - name: Create namespace 
+    - name: Create namespaces
       run: |
-         namespacePresentBlue=`kubectl get ns | grep hello-blue | wc -l`
-         namespacePresentGreen=`kubectl get ns | grep hello-green | wc -l`
-         if [ $namespacePresentBlue -eq 0 ]
-         then
-            kubectl create ns hello-blue
-            echo "NEW_NAMESPACE=hello-blue" >> $GITHUB_ENV
-            echo "OLD_NAMESPACE=hello-green" >> $GITHUB_ENV
-         elif [ $namespacePresentGreen -eq 0 ]
-         then
-            kubectl create ns hello-green
-            echo "NEW_NAMESPACE=hello-green" >> $GITHUB_ENV
-            echo "OLD_NAMESPACE=hello-blue" >> $GITHUB_ENV
-         else
-            echo "Both Blue and Green namespaces are present! Exiting"
-            exit 1
-         fi
-
-    - name: Update Kubernetes resources
-      env:
-        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-      run: |
-        if [ "${{ env.NEW_NAMESPACE }}" == "hello-blue" ]; then
-          sed -i "s|image:.*|image: $DOCKER_USERNAME/github-actions-example:${{ github.sha }}|g" k8s/hello-blue.yaml
-        elif [ "${{ env.NEW_NAMESPACE }}" == "hello-green" ]; then
-          sed -i "s|image:.*|image: $DOCKER_USERNAME/github-actions-example:${{ github.sha }}|g" k8s/hello-green.yaml
+        namespacePresentBlue=`kubectl get ns | grep hello-blue | wc -l`
+        namespacePresentGreen=`kubectl get ns | grep hello-green | wc -l`
+        if [ $namespacePresentBlue -eq 0 ] && [ $namespacePresentGreen -eq 0 ]; then
+          echo "Both blue and green namespaces are absent. Exiting."
+          exit 1
         fi
-    
-    - name: Deploy updated Kubernetes resources
-      run: |
-        if [ "${{ env.NEW_NAMESPACE }}" == "hello-blue" ]; then
-          kubectl apply -f k8s/hello-blue.yaml
-        elif [ "${{ env.NEW_NAMESPACE }}" == "hello-green" ]; then
-          kubectl apply -f k8s/hello-green.yaml
+        if [ $namespacePresentBlue -eq 0 ]; then
+          kubectl create ns hello-blue
+          echo "Created hello-blue namespace"
+        fi
+        if [ $namespacePresentGreen -eq 0 ]; then
+          kubectl create ns hello-green
+          echo "Created hello-green namespace"
         fi
 
-    - name: Remove old namespace
+    - name: Deploy blue version (if not deployed)
       run: |
-        if [ "${{ env.OLD_NAMESPACE }}" != "" ]; then
-          kubectl delete namespace ${{ env.OLD_NAMESPACE }} --wait=true
-        fi
+      # If the blue deployment is not already present, deploy it
+        kubectl apply -f k8s/hello-blue.yaml -n hello-blue
+        kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-blue
+      
+    - name: Test blue deployment
+      run: |
+        BLUE_URL=$(kubectl get svc hello-service -n hello-blue -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "Blue deployment URL: $BLUE_URL"
+        curl $BLUE_URL || exit 1  # If curl fails, exit the pipeline
+        kubectl get pods -n hello-blue
+
+    - name: Deploy green version (new version)
+      run: |
+      # Deploy the green version (new version)
+        kubectl apply -f k8s/hello-green.yaml -n hello-green
+        kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-green
+
+    - name: Test green deployment
+      run: |
+        GREEN_URL=$(kubectl get svc hello-service -n hello-green -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        echo "Green deployment URL: $GREEN_URL"
+        curl $GREEN_URL || exit 1  # If curl fails, exit the pipeline
+        kubectl get pods -n hello-green
+
+    - name: Switch traffic to green version
+      run: |
+        kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
+        echo "Traffic is now routed to green version"
  
     - name: Commit files
       run: |
