@@ -124,7 +124,6 @@ jobs:
 
     - name: Deploy blue version (if not deployed)
       run: |
-      # If the blue deployment is not already present, deploy it
         kubectl apply -f k8s/hello-blue.yaml -n hello-blue
         kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-blue
       
@@ -137,7 +136,6 @@ jobs:
 
     - name: Deploy green version (new version)
       run: |
-      # Deploy the green version (new version)
         kubectl apply -f k8s/hello-green.yaml -n hello-green
         kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-green
 
