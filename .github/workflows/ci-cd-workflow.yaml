@@ -107,8 +107,8 @@ jobs:
     - name: Authenticate to GKE cluster
       uses: google-github-actions/get-gke-credentials@v2
       with:
-        cluster_name: autopilot-cluster-1
-        location: us-central1
+        cluster_name: '${{ secrets.GKE_CLUSTER }}'
+        location: '${{ secrets.GKE_REGION }}'
 
     - name: Create namespace & set in Kustomize
       run: |
