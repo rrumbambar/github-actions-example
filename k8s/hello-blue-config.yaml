@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hello-config
+  namespace: hello-blue
+data:
+  config.properties: |
+    [features]
+    feature_1=True
+    feature_2=False
+    feature_3=True
