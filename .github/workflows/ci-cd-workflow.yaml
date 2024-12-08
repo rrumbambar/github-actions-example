@@ -125,7 +125,7 @@ jobs:
     - name: Deploy blue version (if not deployed)
       run: |
         kubectl apply -f k8s/hello-blue.yaml -n hello-blue
-        kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-blue
+        kubectl set image deployment/hello-deployment-blue hello-container=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-blue
       
     - name: Test blue deployment
       run: |
@@ -137,7 +137,7 @@ jobs:
     - name: Deploy green version (new version)
       run: |
         kubectl apply -f k8s/hello-green.yaml -n hello-green
-        kubectl set image deployment/hello-app hello-app=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-green
+        kubectl set image deployment/hello-deployment-green hello-container=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-green
 
     - name: Test green deployment
       run: |
