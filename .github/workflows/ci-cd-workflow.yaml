@@ -148,7 +148,7 @@ jobs:
 
     - name: Wait for green deployment to be ready
       run: |
-        kubectl rollout status deployment/hello-service -n hello-green
+        kubectl rollout status deployment/hello-deployment-green -n hello-green
     
     - name: Switch traffic to green version
       run: |
