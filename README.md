@@ -41,18 +41,3 @@ kubectl delete all -l app=hello-app
 
 
 
-
-
-
-
-
-# Navigate to the project directory
-cd repo
-
-# Install dependencies
-npm install
-
-# Start the application
-npm start
-
-

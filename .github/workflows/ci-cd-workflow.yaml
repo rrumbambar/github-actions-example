@@ -79,17 +79,12 @@ jobs:
     
     env:
       PROJECT_ID: ${{ secrets.GKE_PROJECT }}
-      GKE_CLUSTER: autopilot-cluster-1    # TODO: update to cluster name
-      GKE_REGION: us-central1	   # TODO: update to cluster region
+      GKE_CLUSTER: autopilot-cluster-1
+      GKE_REGION: us-central1
 
     steps:
     - name: Check out code
       uses: actions/checkout@v2
-
-    - name: Setup Kustomize
-      uses: imranismail/setup-kustomize@v1
-      with:
-        kustomize-version: "3.6.1"
 
     - name: Authenticate to Google Cloud
       uses: 'google-github-actions/auth@v2'
@@ -110,22 +105,18 @@ jobs:
         cluster_name: '${{ secrets.GKE_CLUSTER }}'
         location: '${{ secrets.GKE_REGION }}'
 
-    - name: Create namespace & set in Kustomize
+    - name: Create namespace 
       run: |
          namespacePresentBlue=`kubectl get ns | grep hello-blue | wc -l`
          namespacePresentGreen=`kubectl get ns | grep hello-green | wc -l`
          if [ $namespacePresentBlue -eq 0 ]
          then
             kubectl create ns hello-blue
-            cd k8s
-            kustomize edit set namespace hello-blue
             echo "NEW_NAMESPACE=hello-blue" >> $GITHUB_ENV
             echo "OLD_NAMESPACE=hello-green" >> $GITHUB_ENV
          elif [ $namespacePresentGreen -eq 0 ]
          then
             kubectl create ns hello-green
-            cd k8s
-            kustomize edit set namespace hello-green
             echo "NEW_NAMESPACE=hello-green" >> $GITHUB_ENV
             echo "OLD_NAMESPACE=hello-blue" >> $GITHUB_ENV
          else
@@ -137,33 +128,32 @@ jobs:
       env:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
-       cd k8s
-       kustomize edit set image github-actions-example=$DOCKER_USERNAME/github-actions-example:$GITHUB_SHA
-       cat kustomization.yaml
+        if [ "${{ env.NEW_NAMESPACE }}" == "hello-blue" ]; then
+          sed -i "s|image:.*|image: $DOCKER_USERNAME/github-actions-example:${{ github.sha }}|g" k8s/hello-blue.yaml
+        elif [ "${{ env.NEW_NAMESPACE }}" == "hello-green" ]; then
+          sed -i "s|image:.*|image: $DOCKER_USERNAME/github-actions-example:${{ github.sha }}|g" k8s/hello-green.yaml
+        fi
     
     - name: Deploy updated Kubernetes resources
       run: |
-        kubectl apply -k k8s/ 
-   
-    # DO SOME CHECKS HERE BEFORE COMMIT
-    #- name: Deploy updated Kubernetes resources
-    #  run: |
-    #    kubectl apply -k k8s/
+        if [ "${{ env.NEW_NAMESPACE }}" == "hello-blue" ]; then
+          kubectl apply -f k8s/hello-blue.yaml
+        elif [ "${{ env.NEW_NAMESPACE }}" == "hello-green" ]; then
+          kubectl apply -f k8s/hello-green.yaml
+        fi
 
-    # REMOVE OLD DEPLOYMENT!!
     - name: Remove old namespace
       run: |
-        namespacePresentOld=`kubectl get ns | grep ${{ env.OLD_NAMESPACE }} | wc -l`
-        if [ $namespacePresentOld -eq 1 ]
-        then
-          kubectl delete ns ${{ env.OLD_NAMESPACE }} --wait=true
+        if [ "${{ env.OLD_NAMESPACE }}" != "" ]; then
+          kubectl delete namespace ${{ env.OLD_NAMESPACE }} --wait=true
         fi
  
     - name: Commit files
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git commit -am "Bump docker tag"
+        git add k8s/*.yaml
+        git commit -m "Update resource files with new Docker tag ${{ github.sha }}"
         
     - name: Push changes
       uses: ad-m/github-push-action@master
