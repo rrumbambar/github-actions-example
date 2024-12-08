@@ -121,11 +121,13 @@ jobs:
           kubectl create ns hello-green
           echo "Created hello-green namespace"
         fi
-
+    - name: Apply Config Map
+      run: |
+        kubectl apply -f k8s/hello-config.yaml -n hello-blue
     - name: Deploy blue version (if not deployed)
       run: |
         kubectl apply -f k8s/hello-blue.yaml -n hello-blue
-        kubectl set image deployment/hello-deployment-blue hello-container=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-blue
+        kubectl set image deployment/hello-deployment-blue hello-container=$DOCKER_USERNAME/github-actions-example:build-${{ github.run_number }} -n hello-blue
       
     - name: Test blue deployment
       run: |
@@ -137,7 +139,7 @@ jobs:
     - name: Deploy green version (new version)
       run: |
         kubectl apply -f k8s/hello-green.yaml -n hello-green
-        kubectl set image deployment/hello-deployment-green hello-container=$DOCKER_USERNAME/github-actions-example:${{ github.sha }} -n hello-green
+        kubectl set image deployment/hello-deployment-green hello-container=$DOCKER_USERNAME/github-actions-example:build-${{ github.run_number }} -n hello-green
 
     - name: Test green deployment
       run: |
@@ -156,7 +158,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add k8s/*.yaml
-        git commit -m "Update resource files with new Docker tag ${{ github.sha }}"
+        git commit -m "Update resource files with new Docker tag 'build-${{ github.run_number }}'"
         
     - name: Push changes
       uses: ad-m/github-push-action@master
