@@ -60,7 +60,7 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
       
-    - name: Build and push
+    - name: Build and push image
       uses: docker/build-push-action@v5
       with:
         context: ./app 
@@ -121,23 +121,27 @@ jobs:
           kubectl create ns hello-green
           echo "Created hello-green namespace"
         fi
-    - name: Apply Config Map
+    - name: Apply Config Map for blue
       run: |
         kubectl apply -f k8s/hello-blue-config.yaml -n hello-blue
 
-    - name: Deploy blue version (if not deployed)
+    - name: Deploy blue version
       run: |
         kubectl apply -f k8s/hello-blue.yaml -n hello-blue
         kubectl set image deployment/hello-deployment-blue hello-container=${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }} -n hello-blue
+
+    - name: Wait for blue deployment to be ready
+      run: |
+        kubectl rollout status deployment/hello-deployment-blue -n hello-blue
       
-    - name: Test blue deployment
+    - name: Test blue version
       run: |
         BLUE_URL=$(kubectl get svc hello-service -n hello-blue -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "Blue deployment URL: $BLUE_URL"
         curl $BLUE_URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n hello-blue
 
-    - name: Apply Config Map
+    - name: Apply Config Map for green
       run: |
         kubectl apply -f k8s/hello-green-config.yaml -n hello-green
 
@@ -155,10 +159,11 @@ jobs:
         kubectl patch service hello-service -n hello-green -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
         echo "Traffic is now routed to green version"   
 
-    - name: Test green deployment
+    - name: Test green version
       run: |
         GREEN_URL=$(kubectl get svc hello-service -n hello-green -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "Green deployment URL: $GREEN_URL"
+        sleep 30
         curl $GREEN_URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n hello-green
  
