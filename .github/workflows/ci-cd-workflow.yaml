@@ -124,6 +124,7 @@ jobs:
     - name: Apply Config Map
       run: |
         kubectl apply -f k8s/hello-blue-config.yaml -n hello-blue
+
     - name: Deploy blue version (if not deployed)
       run: |
         kubectl apply -f k8s/hello-blue.yaml -n hello-blue
@@ -139,10 +140,20 @@ jobs:
     - name: Apply Config Map
       run: |
         kubectl apply -f k8s/hello-green-config.yaml -n hello-green
+
     - name: Deploy green version (new version)
       run: |
         kubectl apply -f k8s/hello-green.yaml -n hello-green
         kubectl set image deployment/hello-deployment-green hello-container=${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }} -n hello-green
+
+    - name: Wait for green deployment to be ready
+      run: |
+        kubectl rollout status deployment/hello-service -n hello-green
+    
+    - name: Switch traffic to green version
+      run: |
+        kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
+        echo "Traffic is now routed to green version"   
 
     - name: Test green deployment
       run: |
@@ -150,11 +161,6 @@ jobs:
         echo "Green deployment URL: $GREEN_URL"
         curl $GREEN_URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n hello-green
-
-    - name: Switch traffic to green version
-      run: |
-        kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
-        echo "Traffic is now routed to green version"
  
     - name: Commit files
       run: |
