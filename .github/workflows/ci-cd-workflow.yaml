@@ -152,7 +152,7 @@ jobs:
     
     - name: Switch traffic to green version
       run: |
-        kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
+        kubectl patch service hello-service -n hello-green -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
         echo "Traffic is now routed to green version"   
 
     - name: Test green deployment
