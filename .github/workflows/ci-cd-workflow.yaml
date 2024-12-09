@@ -138,6 +138,7 @@ jobs:
       run: |
         BLUE_URL=$(kubectl get svc hello-service -n hello-blue -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "Blue deployment URL: $BLUE_URL"
+        sleep 15
         curl $BLUE_URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n hello-blue
 
@@ -163,11 +164,16 @@ jobs:
       run: |
         GREEN_URL=$(kubectl get svc hello-service -n hello-green -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "Green deployment URL: $GREEN_URL"
-        sleep 30
+        sleep 15
         curl $GREEN_URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n hello-green
- 
-    - name: Commit files
+
+    - name: Update Kubernetes files with new Docker tag
+      run: |
+        # Update YAML files in the repository with the new Docker image tag
+        sed -i "s|image: .*/github-actions-example:.*|image: ${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }}|g" k8s/*.yaml
+
+    - name: Commit updated Kubernetes files
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
