@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+namespace: hello-blue
+images:
+- name: github-actions-example
+  newName: dbatruh/github-actions-example
+  newTag: 25cb89f

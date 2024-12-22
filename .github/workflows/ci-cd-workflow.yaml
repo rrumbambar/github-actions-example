@@ -5,7 +5,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-    
+
 permissions:
   contents: write
 
@@ -89,6 +89,11 @@ jobs:
     - name: Check out code
       uses: actions/checkout@v2
 
+    - name: Setup Kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: "3.6.1"
+
     - name: Authenticate to Google Cloud
       uses: 'google-github-actions/auth@v2'
       with:
@@ -108,73 +113,56 @@ jobs:
         cluster_name: '${{ secrets.GKE_CLUSTER }}'
         location: '${{ secrets.GKE_REGION }}'
 
-    - name: Create namespaces
+    - name: Create namespace & set in Kustomize
       run: |
-        namespacePresentBlue=`kubectl get ns | grep hello-blue | wc -l`
-        namespacePresentGreen=`kubectl get ns | grep hello-green | wc -l`
-        if [ $namespacePresentBlue -eq 0 ] && [ $namespacePresentGreen -eq 0 ]; then
-          echo "Both blue and green namespaces are absent. Exiting."
-          exit 1
-        fi
-        if [ $namespacePresentBlue -eq 0 ]; then
-          kubectl create ns hello-blue
-          echo "Created hello-blue namespace"
-        fi
-        if [ $namespacePresentGreen -eq 0 ]; then
-          kubectl create ns hello-green
-          echo "Created hello-green namespace"
-        fi
-    - name: Apply Config Map for blue
-      run: |
-        kubectl apply -f k8s/hello-blue-config.yaml -n hello-blue
+         namespacePresentBlue=`kubectl get ns | grep hello-app-blue | wc -l`
+         namespacePresentGreen=`kubectl get ns | grep hello-app-green | wc -l`
+         if [ $namespacePresentBlue -eq 0 ]
+         then
+            kubectl create ns hello-app-blue
+            cd k8s
+            kustomize edit set namespace hello-app-blue
+            echo "NEW_NAMESPACE=hello-app-blue" >> $GITHUB_ENV
+            echo "OLD_NAMESPACE=hello-app-green" >> $GITHUB_ENV
+         elif [ $namespacePresentGreen -eq 0 ]
+         then
+            kubectl create ns hello-app-green
+            cd k8s
+            kustomize edit set namespace hello-app-green
+            echo "NEW_NAMESPACE=hello-app-green" >> $GITHUB_ENV
+            echo "OLD_NAMESPACE=hello-app-blue" >> $GITHUB_ENV
+         else
+            echo "Both Blue and Green namespaces are present! Exiting"
+            exit 1
+         fi
 
-    - name: Deploy blue version
+    - name: Update Kubernetes resources
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
-        kubectl apply -f k8s/hello-blue.yaml -n hello-blue
-        kubectl set image deployment/hello-deployment-blue hello-container=${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }} -n hello-blue
+        cd k8s
+        kustomize edit set image github-actions-example=$DOCKER_USERNAME/github-actions-example:$GITHUB_SHA
+        cat kustomization.yaml
 
-    - name: Wait for blue deployment to be ready
+    - name: Deploy updated resources
       run: |
-        kubectl rollout status deployment/hello-deployment-blue -n hello-blue
-      
-    - name: Test blue version
-      run: |
-        BLUE_URL=$(kubectl get svc hello-service -n hello-blue -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
-        echo "Blue deployment URL: $BLUE_URL"
-        sleep 15
-        curl $BLUE_URL || exit 1  # If curl fails, exit the pipeline
-        kubectl get pods -n hello-blue
+        kubectl apply -k ./k8s
 
-    - name: Apply Config Map for green
+    - name: Wait for rollout to complete
       run: |
-        kubectl apply -f k8s/hello-green-config.yaml -n hello-green
+        kubectl rollout status deployment/github-actions-example -n ${{ env.NEW_NAMESPACE }}
 
-    - name: Deploy green version (new version)
+    - name: Send test request to new deployment
       run: |
-        kubectl apply -f k8s/hello-green.yaml -n hello-green
-        kubectl set image deployment/hello-deployment-green hello-container=${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }} -n hello-green
+        NEW_IP=$(kubectl get svc github-actions-example -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        curl -f http://$NEW_IP/health || (echo "Health check failed" && exit 1)
 
-    - name: Wait for green deployment to be ready
-      run: |
-        kubectl rollout status deployment/hello-deployment-green -n hello-green
-    
-    - name: Switch traffic to green version
-      run: |
-        kubectl patch service hello-service -n hello-green -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
-        echo "Traffic is now routed to green version"   
 
-    - name: Test green version
+    - name: Switch traffic to new deployment
       run: |
-        GREEN_URL=$(kubectl get svc hello-service -n hello-green -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
-        echo "Green deployment URL: $GREEN_URL"
-        sleep 15
-        curl $GREEN_URL || exit 1  # If curl fails, exit the pipeline
-        kubectl get pods -n hello-green
-
-    - name: Update Kubernetes files with new Docker tag
-      run: |
-        # Update YAML files in the repository with the new Docker image tag
-        sed -i "s|image: .*/github-actions-example:.*|image: ${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }}|g" k8s/*.yaml
+        kubectl patch ingress hello-app-ingress \
+           -n ${{ env.NEW_NAMESPACE }} \
+           -p '{"spec":{"rules":[{"http":{"paths":[{"path":"/","backend":{"service":{"name":"github-actions-example","port":{"number":80}}}}]}}]}}'
 
     - name: Commit updated Kubernetes files
       run: |

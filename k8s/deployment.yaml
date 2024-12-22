@@ -1,21 +1,18 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: hello-deployment-blue
+  name: hello-deployment
   labels:
     app: hello-app
-    environment: blue
 spec:
   replicas: 1
   selector:
     matchLabels:
       app: hello-app
-      environment: blue
   template:
     metadata:
       labels:
         app: hello-app
-        environment: blue
     spec:
       containers:
       - name: hello-container
@@ -30,18 +27,3 @@ spec:
       - name: config-volume
         configMap:
           name: hello-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: hello-service
-spec:
-  selector:
-    app: hello-app
-    environment: blue
-  ports:
-  - protocol: TCP
-    port: 8050
-    targetPort: 8050
-    nodePort: 30111
-  type: LoadBalancer
