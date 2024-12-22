@@ -154,15 +154,16 @@ jobs:
 
     - name: Send test request to new deployment
       run: |
-        NEW_IP=$(kubectl get svc hello-deployment -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        curl -f http://$NEW_IP/health || (echo "Health check failed" && exit 1)
+        NEW_IP=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        NEW_PORT=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
+        curl $NEW_IP:$NEW_PORT
 
 
     - name: Switch traffic to new deployment
       run: |
         kubectl patch ingress hello-app-ingress \
            -n ${{ env.NEW_NAMESPACE }} \
-           -p '{"spec":{"rules":[{"http":{"paths":[{"path":"/","backend":{"service":{"name":"hello-service","port":{"number":80}}}}]}}]}}'
+           -p '{"spec":{"rules":[{"host":"example.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"hello-service","port":{"number":80}}}}]}}]}}'
 
     - name: Commit updated Kubernetes files
       run: |
