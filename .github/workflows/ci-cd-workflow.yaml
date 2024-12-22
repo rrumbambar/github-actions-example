@@ -156,7 +156,8 @@ jobs:
       run: |
         NEW_IP=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         NEW_PORT=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
-        curl $NEW_IP:$NEW_PORT
+        sleep 10
+        curl http://$NEW_IP:$NEW_PORT
 
 
     - name: Switch traffic to new deployment
