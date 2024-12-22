@@ -4,6 +4,7 @@ resources:
 - deployment.yaml
 - service.yaml
 - ingress.yaml
+- config.yaml
 namespace: hello-blue
 images:
 - name: github-actions-example
