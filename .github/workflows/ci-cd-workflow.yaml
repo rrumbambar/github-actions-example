@@ -152,6 +152,14 @@ jobs:
       run: |
         kubectl rollout status deployment/hello-deployment -n ${{ env.NEW_NAMESPACE }}
 
+    - name: Wait for pods to be ready
+      run: |
+        while ! kubectl get pods -l app=hello-service -o jsonpath='{.items[0].status.conditions[?(@.type=="Ready")].status}' | grep -q "True"; do
+          echo "Waiting for pods to be ready..."
+          sleep 5
+        done
+        echo "Pods are ready!"
+
     - name: Debug Kubernetes service
       run: |
         kubectl wait --for=condition=external-ip-ready svc/hello-service --timeout=60s
