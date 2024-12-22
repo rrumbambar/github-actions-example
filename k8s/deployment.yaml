@@ -22,7 +22,14 @@ spec:
         volumeMounts:
         - name: config-volume
           mountPath: /app/config.properties  
-          subPath: config.properties         
+          subPath: config.properties
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "256Mi"         
       volumes:
       - name: config-volume
         configMap:

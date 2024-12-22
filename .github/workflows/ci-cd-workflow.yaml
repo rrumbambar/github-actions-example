@@ -150,11 +150,11 @@ jobs:
 
     - name: Wait for rollout to complete
       run: |
-        kubectl rollout status deployment/github-actions-example -n ${{ env.NEW_NAMESPACE }}
+        kubectl rollout status deployment/hello-deployment -n ${{ env.NEW_NAMESPACE }}
 
     - name: Send test request to new deployment
       run: |
-        NEW_IP=$(kubectl get svc github-actions-example -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+        NEW_IP=$(kubectl get svc hello-deployment -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         curl -f http://$NEW_IP/health || (echo "Health check failed" && exit 1)
 
 
@@ -162,7 +162,7 @@ jobs:
       run: |
         kubectl patch ingress hello-app-ingress \
            -n ${{ env.NEW_NAMESPACE }} \
-           -p '{"spec":{"rules":[{"http":{"paths":[{"path":"/","backend":{"service":{"name":"github-actions-example","port":{"number":80}}}}]}}]}}'
+           -p '{"spec":{"rules":[{"http":{"paths":[{"path":"/","backend":{"service":{"name":"hello-service","port":{"number":80}}}}]}}]}}'
 
     - name: Commit updated Kubernetes files
       run: |
