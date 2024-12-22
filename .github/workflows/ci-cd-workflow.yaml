@@ -154,7 +154,7 @@ jobs:
 
     - name: Debug Kubernetes service
       run: |
-        sleep 15
+        kubectl wait --for=condition=external-ip-ready svc/hello-service --timeout=60s
         kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }}
 
     - name: Send test request to new deployment
