@@ -152,13 +152,17 @@ jobs:
       run: |
         kubectl rollout status deployment/hello-deployment -n ${{ env.NEW_NAMESPACE }}
 
+    - name: Debug Kubernetes service
+      run: |
+        sleep 15
+        kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }}
+
     - name: Send test request to new deployment
       run: |
         NEW_IP=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
         NEW_PORT=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
         echo "New IP: $NEW_IP"
         echo "New Port: $NEW_PORT"
-        sleep 15
         curl http://$NEW_IP:$NEW_PORT
 
 
