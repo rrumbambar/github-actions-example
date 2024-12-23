@@ -152,22 +152,30 @@ jobs:
       run: |
         kubectl rollout status deployment/hello-deployment -n ${{ env.NEW_NAMESPACE }}
 
-    - name: Wait for all pods to be running
-      run: |
-        kubectl wait --for=condition=Ready pod -l app=hello-app -n ${{ env.NEW_NAMESPACE }} --timeout=60s
+    # - name: Wait for all pods to be running
+    #   run: |
+    #     kubectl wait --for=condition=Ready pod -l app=hello-app -n ${{ env.NEW_NAMESPACE }} --timeout=60s
 
-    - name: Debug Kubernetes service
-      run: |
-        kubectl wait --for=condition=external-ip-ready svc/hello-service -n ${{ env.NEW_NAMESPACE }} --timeout=60s
-        kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }}
+    # - name: Debug Kubernetes service
+    #   run: |
+    #     kubectl wait --for=condition=external-ip-ready svc/hello-service -n ${{ env.NEW_NAMESPACE }} --timeout=60s
+    #     kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }}
 
-    - name: Send test request to new deployment
+    # - name: Send test request to new deployment
+    #   run: |
+    #     NEW_IP=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    #     NEW_PORT=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
+    #     echo "New IP: $NEW_IP"
+    #     echo "New Port: $NEW_PORT"
+    #     curl http://$NEW_IP:$NEW_PORT
+
+    - name: Test new deployment
       run: |
-        NEW_IP=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        NEW_PORT=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o jsonpath='{.spec.ports[0].port}')
-        echo "New IP: $NEW_IP"
-        echo "New Port: $NEW_PORT"
-        curl http://$NEW_IP:$NEW_PORT
+        URL=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
+        echo "New deployment URL: $URL"
+        sleep 15
+        curl $URL || exit 1  # If curl fails, exit the pipeline
+        kubectl get pods -n ${{ env.NEW_NAMESPACE }}
 
 
     - name: Switch traffic to new deployment
