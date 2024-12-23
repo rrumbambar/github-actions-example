@@ -171,9 +171,9 @@ jobs:
 
     - name: Test new deployment
       run: |
+        sleep 15
         URL=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "New deployment URL: $URL"
-        sleep 15
         curl $URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n ${{ env.NEW_NAMESPACE }}
 
