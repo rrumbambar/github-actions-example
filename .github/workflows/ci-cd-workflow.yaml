@@ -171,13 +171,11 @@ jobs:
 
     - name: Test new deployment
       run: |
-        sleep 40
+        timeout 120 bash -c 'while ! kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o=jsonpath="{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}" 2>/dev/null | grep -Eq "^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+$"; do sleep 1; done'
         URL=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "New deployment URL: $URL"
         curl $URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n ${{ env.NEW_NAMESPACE }}
-
-        kubectl wait --for=condition=external-ip-ready svc/hello-service -n hello-app-blue --timeout=60s
 
     - name: Switch traffic to new deployment
       run: |
@@ -196,3 +194,8 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }} 
+
+timeout 30 bash -c 'while ! kubectl get svc hello-service -n hello-app-blue -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}'; do
+  sleep 1
+done
+'
