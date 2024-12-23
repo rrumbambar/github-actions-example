@@ -171,12 +171,13 @@ jobs:
 
     - name: Test new deployment
       run: |
-        sleep 15
+        sleep 40
         URL=$(kubectl get svc hello-service -n ${{ env.NEW_NAMESPACE }} -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}')
         echo "New deployment URL: $URL"
         curl $URL || exit 1  # If curl fails, exit the pipeline
         kubectl get pods -n ${{ env.NEW_NAMESPACE }}
 
+        kubectl wait --for=condition=external-ip-ready svc/hello-service -n hello-app-blue --timeout=60s
 
     - name: Switch traffic to new deployment
       run: |
