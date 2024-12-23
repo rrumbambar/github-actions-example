@@ -1,43 +1,33 @@
-# Blue/green deployment to release a single service
+# Blue-Green Deployment Workflow for `hello-app`
 
-## Manual deployment workflow
+This repository demonstrates the Blue-Green deployment strategy for `hello-app` using Kubernetes and GitHub Actions.
 
-```bash
-#deploy blue application version
-minikube start
-kubectl apply -f hello-config.yaml
-kubectl apply -f hello-blue.yaml
+## Workflow Overview
 
-#test if blue deployment was successful
-minikube service hello-service --url
-curl <url>
+1. **Build and Push Docker Image**:  
+   The application is containerized and pushed to a container registry (https://hub.docker.com/r/dbatruh/github-actions-example).
 
-#review blue pod status
-kubectl get pods
+2. **Deploy to Green Environment**:  
+   The updated version is deployed to the `green` environment while the `blue` environment remains active.
 
-#then deploy green application version
-kubectl apply -f hello-green.yaml
+3. **Test Green Environment**:  
+   Smoke tests are executed to validate the new deployment.
 
-#review green pod status
-kubectl get pods
+4. **Switch Traffic to Green**:  
+   Once validated, the Kubernetes service routes all traffic to the `green` environment.
 
-#if running, forward traffic from blue version to green version
-kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"green"}}}'
+5. **Clean Up**:  
+   After the `green` environment is stable, the `blue` environment is be removed.
 
-#test if green deployment was successful
-minikube service hello-service --url
-curl <url>
+## Automating with GitHub Actions
 
-#if green version works, you may delete blue version
-kubectl get deployments
-kubectl delete deployment <deployment-name>
+The `.github/workflows/ci-cd-workflow.yaml` file automates this workflow:
+- Builds the Docker image.
+- Pushes the image to a registry.
+- Deploys to Kubernetes cluster in GKE.
+- Executes tests and switches traffic upon success.
+- Updates Kubernetes resources and commits updated files to repository.
 
-#in case you need rollback to blue version
-kubectl patch service hello-service -p '{"spec":{"selector":{"app":"hello-app","environment":"blue"}}}'
+---
 
-#cleanup
-kubectl delete all -l app=hello-app
-```
-
-
-
+For manual deployment steps, Kubernetes manifests are located in the `k8s/` directory.
