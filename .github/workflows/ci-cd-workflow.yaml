@@ -182,6 +182,14 @@ jobs:
         kubectl patch ingress hello-app-ingress \
            -n ${{ env.NEW_NAMESPACE }} \
            -p '{"spec":{"rules":[{"host":"example.com","http":{"paths":[{"path":"/","pathType":"Prefix","backend":{"service":{"name":"hello-service","port":{"number":80}}}}]}}]}}'
+    
+    - name: Remove old namespace
+      run: |
+        namespacePresentOld=`kubectl get ns | grep ${{ env.OLD_NAMESPACE }} | wc -l`
+        if [ $namespacePresentOld -eq 1 ]
+        then
+          kubectl delete ns ${{ env.OLD_NAMESPACE }} --wait=true
+        fi
 
     - name: Commit updated Kubernetes files
       run: |
