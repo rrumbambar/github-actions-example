@@ -194,8 +194,3 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }} 
-
-timeout 30 bash -c 'while ! kubectl get svc hello-service -n hello-app-blue -o=jsonpath='{.status.loadBalancer.ingress[0].ip}:{.spec.ports[0].port}'; do
-  sleep 1
-done
-'
