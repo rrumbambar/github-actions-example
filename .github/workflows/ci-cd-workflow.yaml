@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  on:
+    workflow_dispatch:
 
 permissions:
   contents: write
@@ -70,7 +72,7 @@ jobs:
         file: ./app/Dockerfile
         builder: ${{ steps.buildx.outputs.name }}
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/github-actions-example:build-${{ github.run_number }}
+        tags: ${{ secrets.DOCKER_USERNAME }}/github-actions-example:${{ github.sha }}
         platforms: linux/amd64,linux/arm64
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache
@@ -141,7 +143,7 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
       run: |
         cd k8s
-        kustomize edit set image github-actions-example=$DOCKER_USERNAME/github-actions-example:$GITHUB_SHA
+        kustomize edit set image dbatruh/github-actions-example=dbatruh/github-actions-example:${{ github.sha }}
         cat kustomization.yaml
 
     - name: Deploy updated resources
@@ -178,7 +180,7 @@ jobs:
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git add k8s/*.yaml
-        git commit -m "Update resource files with new Docker tag 'build-${{ github.run_number }}'"
+        git commit -m "Update resource files with new Docker tag '${{ github.sha }}'"
         
     - name: Push changes
       uses: ad-m/github-push-action@master

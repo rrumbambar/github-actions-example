@@ -7,6 +7,5 @@ resources:
 - config.yaml
 namespace: hello-app-blue
 images:
-- name: github-actions-example
-  newName: dbatruh/github-actions-example
+- name: dbatruh/github-actions-example
   newTag: fde63cb803e9fd8b15d9c9c20fdb3369a1c0c134

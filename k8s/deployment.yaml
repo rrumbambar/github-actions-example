@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: hello-container
-        image: dbatruh/github-actions-example:build-24
+        image: dbatruh/github-actions-example
         ports:
         - containerPort: 8050
         volumeMounts:
