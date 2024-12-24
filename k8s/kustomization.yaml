@@ -5,8 +5,8 @@ resources:
 - service.yaml
 - ingress.yaml
 - config.yaml
-namespace: hello-app-blue
+namespace: hello-app-green
 images:
 - name: dbatruh/github-actions-example
   newName: dbatruh/github-actions-example
-  newTag: df46ceafb84c70e72407bae449196ed36116f9a7
+  newTag: 7b0ddfbca199403d6855a42d81e089bb9f672aef
