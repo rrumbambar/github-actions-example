@@ -8,4 +8,5 @@ resources:
 namespace: hello-app-blue
 images:
 - name: dbatruh/github-actions-example
-  newTag: fde63cb803e9fd8b15d9c9c20fdb3369a1c0c134
+  newName: dbatruh/github-actions-example
+  newTag: df46ceafb84c70e72407bae449196ed36116f9a7
